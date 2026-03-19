@@ -295,6 +295,7 @@ function renderAll(rows) {
   const totV = data.reduce((s, d) => s + d.v, 0);
   const totC = data.reduce((s, d) => s + d.c, 0);
   const totRC = totR + totC;
+  const totD = totRC - totV;
   const totE = (totRC / totV) * 100;
   const dp = data.filter(d => dif(d) >= 0).length;
   const ultimo = data[data.length - 1];
