@@ -260,9 +260,16 @@ function parseCSV(text) {
   });
 }
 
+function isDateRow(s) {
+  if (!s) return false;
+  const clean = s.toString().trim().toLowerCase();
+  if (clean === "" || clean === "total" || clean === "fecha" || clean.startsWith("prom")) return false;
+  return /\d/.test(clean);
+}
+
 function buildData(rows) {
   return rows
-    .filter(r => r[0] && r[0].toString().trim())
+    .filter(r => isDateRow(r[0]))
     .map(r => ({
       f: r[0].toString().trim(),
       r: parseNum(r[1]),
@@ -288,9 +295,10 @@ function renderAll(rows) {
   const totV = data.reduce((s, d) => s + d.v, 0);
   const totC = data.reduce((s, d) => s + d.c, 0);
   const totRC = totR + totC;
-  const totD = totRC - totV;
   const totE = (totRC / totV) * 100;
   const dp = data.filter(d => dif(d) >= 0).length;
+  const ultimo = data[data.length - 1];
+  const ultEff = eff(ultimo);
 
   document.getElementById('subtitle').textContent =
     `${data.length} días registrados · Efectividad acumulada: ${fmtP(totE)}`;
@@ -298,8 +306,8 @@ function renderAll(rows) {
   // KPIs
   document.getElementById('kpis').innerHTML = [
     { l: 'Efectividad acumulada', v: fmtP(totE), s: '(Rec.+Comp.) / Vencimiento', c: totE >= 100 ? 'var(--green)' : 'var(--red)' },
-    { l: 'Total recaudado', v: fmtB(totR), s: `Compensación: ${fmtB(totC)}`, c: 'var(--text)' },
-    { l: 'Diferencia acumulada', v: fmtB(totD), s: totD >= 0 ? 'Superávit global' : 'Déficit global', c: totD >= 0 ? 'var(--green)' : 'var(--red)' },
+    { l: `Recaudado — ${ultimo.f}`, v: fmtB(ultimo.r), s: `Comp: ${fmtB(ultimo.c)} · Rec+Comp: ${fmtB(rc(ultimo))}`, c: 'var(--text)' },
+    { l: `Vencimiento — ${ultimo.f}`, v: fmtB(ultimo.v), s: ultEff >= 100 ? `Efectividad: ${fmtP(ultEff)} ▲` : `Efectividad: ${fmtP(ultEff)} ▼`, c: ultEff >= 100 ? 'var(--green)' : 'var(--red)' },
     { l: 'Días positivos / negativos', v: `${dp} / ${data.length - dp}`, s: `de ${data.length} días hábiles`, c: 'var(--text)' }
   ].map(k => `<div class="metric">
     <div class="mlabel">${k.l}</div>
