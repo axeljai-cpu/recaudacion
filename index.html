@@ -225,7 +225,7 @@ const GC = 'rgba(0,0,0,0.06)';
 
 async function fetchData() {
   try {
-    const res = await fetch(CSV_URL);
+    const res = await fetch(CSV_URL + '&t=' + Date.now());
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const text = await res.text();
     const rows = parseCSV(text);
