@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Panel de Recaudación — Marzo 2026</title>
+<title>Panel de Recaudación</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
   :root {
@@ -100,7 +100,7 @@
 <div class="page">
 
   <header>
-    <h1>Panel de Recaudación — Marzo 2026</h1>
+    <h1 id="main-title">Panel de Recaudación</h1>
     <p id="subtitle">Cargando datos...</p>
   </header>
 
@@ -187,7 +187,7 @@
 // ============================================================
 //  CONFIGURACIÓN — solo tocás esta línea
 // ============================================================
-const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRh4aORm1jli8TyudCj_Bi7fcI93d2lvMbmTzghMUIAVUU2kAGEcx6IN2mIuhlRp-WYymj_zN4eDkfb/pub?gid=2099929365&single=true&output=csv';
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRh4aORm1jli8TyudCj_Bi7fcI93d2lvMbmTzghMUIAVUU2kAGEcx6IN2mIuhlRp-WYymj_zN4eDkfb/pub?gid=208414190&single=true&output=csv';
 
 let cE, cD, cC, cSt;
 
@@ -230,6 +230,12 @@ async function fetchData() {
     const text = await res.text();
     const rows = parseCSV(text);
     if (rows.length < 2) throw new Error('Sin datos');
+    const headerRow = rows[0];
+    const mesNombre = headerRow && headerRow[4] ? headerRow[4].toString().trim() : '';
+    if (mesNombre) {
+      document.getElementById('main-title').textContent = 'Panel de Recaudación — ' + mesNombre;
+      document.title = 'Panel de Recaudación — ' + mesNombre;
+    }
     renderAll(rows.slice(1)); // skip header row
     document.getElementById('loading').style.display = 'none';
     document.getElementById('content').style.display = 'block';
