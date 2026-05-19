@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Customer Journey</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root{
+    --bg:#f5f4f0;--surface:#fff;--surface2:#f0ede8;--border:rgba(0,0,0,.1);--border2:rgba(0,0,0,.2);
+    --text:#1a1a18;--text2:#6b6b67;--text3:#9b9b96;
+    --green:#3a9e6c;--green-bg:#eaf3de;--green-text:#3b6d11;
+    --red:#e24b4a;--red-bg:#fcebeb;--red-text:#a32d2d;
+    --blue:#378add;--radius:12px;--radius-sm:8px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+  .page{max-width:1300px;margin:0 auto;padding:2rem 1.5rem}
+  nav{display:flex;align-items:center;gap:12px;margin-bottom:2rem;padding-bottom:1rem;border-bottom:.5px solid var(--border2);flex-wrap:wrap}
+  nav a{font-size:13px;color:var(--text2);text-decoration:none;padding:5px 12px;border-radius:var(--radius-sm);border:.5px solid var(--border)}
+  nav a:hover{background:var(--surface2)}
+  nav a.active{background:var(--text);color:#fff;border-color:var(--text)}
+  h1{font-size:22px;font-weight:600;margin-bottom:4px}
+  .sub{font-size:13px;color:var(--text2);margin-bottom:1.5rem}
+  .ctrl-bar{background:var(--surface);border:.5px solid var(--border);border-radius:var(--radius);padding:.875rem 1.25rem;margin-bottom:1.25rem}
+  .ctrl-row{display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:10px}
+  .ctrl-row:last-child{margin-bottom:0}
+  .ctrl-lbl{font-size:11px;font-weight:700;color:var(--text);letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;margin-right:4px;padding-top:5px}
+  .chips{display:flex;flex-wrap:wrap;gap:5px}
+  .chip{font-size:12px;padding:4px 12px;border-radius:20px;border:.5px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;user-select:none;transition:all .15s}
+  .chip:hover{border-color:var(--blue);color:var(--blue)}
+  .chip.active{background:var(--text);color:#fff;border-color:var(--text)}
+  .chip.year-chip.active{background:#378add;border-color:#185fa5}
+  .sep{width:.5px;background:var(--border2);margin:0 4px;align-self:stretch;min-height:24px}
+  .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:1.25rem}
+  .metric{background:var(--surface);border:.5px solid var(--border);border-radius:var(--radius);padding:.875rem 1rem}
+  .mlabel{font-size:12px;color:var(--text);font-weight:700;margin-bottom:4px;letter-spacing:.04em;text-transform:uppercase}
+  .mval{font-size:20px;font-weight:700;margin-bottom:2px}
+  .msub{font-size:12px;color:var(--text2)}
+  .g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:1.25rem}
+  .card{background:var(--surface);border:.5px solid var(--border);border-radius:var(--radius);padding:1.1rem 1.25rem}
+  .card.full{margin-bottom:1.25rem}
+  .ctitle{font-size:12px;font-weight:700;color:var(--text);letter-spacing:.05em;text-transform:uppercase;margin-bottom:10px}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th{font-size:11px;font-weight:700;color:var(--text);text-align:right;padding:6px 8px;border-bottom:.5px solid var(--border2);letter-spacing:.03em;text-transform:uppercase;white-space:nowrap}
+  th:first-child,th.left{text-align:left}
+  td{padding:5px 8px;text-align:right;border-bottom:.5px solid var(--border);color:var(--text);font-size:12px}
+  td:first-child,td.left{text-align:left;font-weight:500}
+  tbody tr:hover{background:var(--surface2)}
+  tfoot td{font-weight:700;border-top:.5px solid var(--border2);background:var(--surface2)}
+  .badge{display:inline-block;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:700}
+  .bg{background:var(--green-bg);color:var(--green-text)}
+  .br{background:var(--red-bg);color:var(--red-text)}
+  .by{background:#faeeda;color:#854f0b}
+  .pos{color:var(--green)}.neg{color:var(--red)}
+  .row-canal td{font-weight:700;background:var(--surface2);font-size:12.5px}
+  footer{margin-top:2rem;text-align:center;font-size:12px;color:var(--text3)}
+  @media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}.g2{grid-template-columns:1fr}.page{padding:1rem}}
+</style>
+</head>
+<body>
+<div class="page">
+  <nav>
+    <a href="index.html">Panel Mensual</a>
+    <a href="semanal.html">Análisis Semanal</a>
+    <a href="compensaciones.html">Compensaciones</a>
+    <a href="customer.html" class="active">Customer Journey</a>
+  </nav>
+
+  <h1>Customer Journey — Canales de Recaudación</h1>
+  <p class="sub" id="sub">Cargando...</p>
+
+  <div class="ctrl-bar">
+    <div class="ctrl-row">
+      <span class="ctrl-lbl">Año:</span>
+      <div class="chips" id="year-chips"></div>
+      <div class="sep"></div>
+      <span class="ctrl-lbl">Mes:</span>
+      <div class="chips" id="month-chips"></div>
+    </div>
+    <div class="ctrl-row">
+      <span class="ctrl-lbl">Entidad:</span>
+      <span class="chip active" id="chip-all-ent" onclick="toggleAllEnt()">Todas</span>
+      <div class="chips" id="ent-chips"></div>
+    </div>
+    <div class="ctrl-row">
+      <span class="ctrl-lbl">Canal:</span>
+      <span class="chip active" id="chip-all-can" onclick="toggleAllCan()">Todos</span>
+      <div class="chips" id="canal-chips"></div>
+    </div>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <!-- Tabla detalle por entidad -->
+  <div class="card full">
+    <div class="ctitle">Detalle por entidad</div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead><tr>
+          <th class="left">Canal / Entidad</th>
+          <th>Talones</th><th>Rec. $</th><th>Comisión $</th><th>% Eficiencia</th><th>Costo x Unidad</th>
+        </tr></thead>
+        <tbody id="tbody-ent"></tbody>
+        <tfoot id="tfoot-ent"></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- Comparativa canales + Ranking -->
+  <div class="g2">
+    <div class="card">
+      <div class="ctitle">Comparativa por canal</div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr>
+            <th class="left">Canal</th><th>Talones</th><th>Rec. $</th><th>Comisión $</th><th>% Efic.</th>
+          </tr></thead>
+          <tbody id="tbody-canal"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ctitle">Ranking por volumen recaudado</div>
+      <div id="ranking-vol"></div>
+    </div>
+  </div>
+
+  <!-- Gráfico evolución eficiencia -->
+  <div class="card full">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+      <div class="ctitle" style="margin:0">Evolución mensual — % Eficiencia (Comisión / Rec.$)</div>
+      <div id="evo-legend" style="display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:var(--text2)"></div>
+    </div>
+    <div style="position:relative;height:280px"><canvas id="cEvo"></canvas></div>
+  </div>
+
+  <!-- Ranking por costo -->
+  <div class="card full">
+    <div class="ctitle">Ranking por % de comisión (costo recaudación)</div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead><tr>
+          <th class="left">Entidad</th><th class="left">Canal</th>
+          <th>% Eficiencia</th><th>Costo x Unidad</th><th>Total Talones</th><th>Total Rec.$</th><th>Total Com.$</th>
+        </tr></thead>
+        <tbody id="tbody-rank"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <footer>Customer Journey · Datos desde archivo Excel · <span id="last-update"></span></footer>
+</div>
+
+<script>
+const RAW = {"months": [{"col": 7, "year": 2024, "month": 1, "label": "Ene-24", "isAcum": false}, {"col": 10, "year": 2024, "month": 2, "label": "Feb-24", "isAcum": false}, {"col": 13, "year": 2024, "month": 3, "label": "Mar-24", "isAcum": false}, {"col": 16, "year": 2024, "month": 4, "label": "Abr-24", "isAcum": false}, {"col": 19, "year": 2024, "month": 5, "label": "May-24", "isAcum": false}, {"col": 22, "year": 2024, "month": 6, "label": "Jun-24", "isAcum": false}, {"col": 25, "year": 2024, "month": 7, "label": "Jul-24", "isAcum": false}, {"col": 28, "year": 2024, "month": 8, "label": "Ago-24", "isAcum": false}, {"col": 31, "year": 2024, "month": 9, "label": "Sep-24", "isAcum": false}, {"col": 34, "year": 2024, "month": 10, "label": "Oct-24", "isAcum": false}, {"col": 37, "year": 2024, "month": 11, "label": "Nov-24", "isAcum": false}, {"col": 40, "year": 2024, "month": 12, "label": "Dic-24", "isAcum": false}, {"col": 43, "year": null, "month": null, "label": "Acumulado 2024", "isAcum": true}, {"col": 46, "year": 2025, "month": 1, "label": "Ene-25", "isAcum": false}, {"col": 49, "year": 2025, "month": 2, "label": "Feb-25", "isAcum": false}, {"col": 52, "year": 2025, "month": 3, "label": "Mar-25", "isAcum": false}, {"col": 55, "year": 2025, "month": 4, "label": "Abr-25", "isAcum": false}, {"col": 58, "year": 2025, "month": 5, "label": "May-25", "isAcum": false}, {"col": 61, "year": 2025, "month": 6, "label": "Jun-25", "isAcum": false}, {"col": 64, "year": 2025, "month": 7, "label": "Jul-25", "isAcum": false}, {"col": 67, "year": 2025, "month": 8, "label": "Ago-25", "isAcum": false}, {"col": 70, "year": 2025, "month": 9, "label": "Sep-25", "isAcum": false}, {"col": 73, "year": 2025, "month": 10, "label": "Oct-25", "isAcum": false}, {"col": 76, "year": 2025, "month": 11, "label": "Nov-25", "isAcum": false}, {"col": 79, "year": 2025, "month": 12, "label": "Dic-25", "isAcum": false}, {"col": 82, "year": null, "month": null, "label": "Acumulado 2025", "isAcum": true}, {"col": 85, "year": 2026, "month": 1, "label": "Ene-26", "isAcum": false}, {"col": 88, "year": 2026, "month": 2, "label": "Feb-26", "isAcum": false}, {"col": 91, "year": 2026, "month": 3, "label": "Mar-26", "isAcum": false}, {"col": 94, "year": 2026, "month": 4, "label": "Abr-26", "isAcum": false}, {"col": 97, "year": 2026, "month": 5, "label": "May-26", "isAcum": false}, {"col": 100, "year": 2026, "month": 6, "label": "Jun-26", "isAcum": false}, {"col": 103, "year": 2026, "month": 7, "label": "Jul-26", "isAcum": false}, {"col": 106, "year": 2026, "month": 8, "label": "Ago-26", "isAcum": false}, {"col": 109, "year": 2026, "month": 9, "label": "Sep-26", "isAcum": false}, {"col": 112, "year": 2026, "month": 10, "label": "Oct-26", "isAcum": false}, {"col": 115, "year": 2026, "month": 11, "label": "Nov-26", "isAcum": false}, {"col": 118, "year": 2026, "month": 12, "label": "Dic-26", "isAcum": false}, {"col": 121, "year": null, "month": null, "label": "Acumulado 2026", "isAcum": true}], "data": [{"canal": "Direct Debit", "subcanal": "Bank", "entidad": "Galicia", "fees": "FIX", "meses": {"Ene-24": {"t": 95586.0, "r": 5897500739.0, "c": 334551.0}, "Feb-24": {"t": 84787.0, "r": 5173959817.0, "c": 296755.0}, "Mar-24": {"t": 81475.0, "r": 9324977553.0, "c": 285163.0}, "Abr-24": {"t": 91921.0, "r": 19900404846.0, "c": 321724.0}, "May-24": {"t": 98.35, "r": 18976452614.0, "c": 344225.0}, "Jun-24": {"t": 70372.0, "r": 14080755729.0, "c": 256630.99999999997}, "Jul-24": {"t": 105.22, "r": 22344.44, "c": 0.37}, "Ago-24": {"t": 93719.0, "r": 23280.52, "c": 0.33}, "Sep-24": {"t": 90434.0, "r": 22091.87, "c": 0.32}, "Oct-24": {"t": 98028.0, "r": 23999.51, "c": 0.36}, "Nov-24": {"t": 84062.0, "r": 19922.33, "c": 0.31}, "Dic-24": {"t": 84626.0, "r": 22261.71, "c": 0.31}, "Acumulado 2024": {"t": 1078580.0, "r": 207254426300.0, "c": 3824531.0}, "Ene-25": {"t": 106433.0, "r": 26396.85, "c": 0.39}, "Feb-25": {"t": 88414.0, "r": 23818.7, "c": 0.32}, "Mar-25": {"t": 84448.0, "r": 23312.54, "c": 0.29}, "Abr-25": {"t": 91343.0, "r": 26634.91, "c": 0.35}, "May-25": {"t": 101419.0, "r": 27961.63, "c": 0.38}, "Jun-25": {"t": 86097.0, "r": 22089.68, "c": 0.28}, "Jul-25": {"t": 108.32, "r": 31997.02, "c": 0.25}, "Ago-25": {"t": 91674.0, "r": 30411.49, "c": 0.56}, "Sep-25": {"t": 96489.0, "r": 31198.01, "c": 0.4}, "Oct-25": {"t": 98956.0, "r": 32416.94, "c": 0.45}, "Nov-25": {"t": 80023.0, "r": 24890.36, "c": 0.34}, "Dic-25": {"t": 106539.0, "r": 33956.17, "c": 0.38}, "Acumulado 2025": {"t": 1140155.0, "r": 335084294152.0, "c": 4397961.0}, "Ene-26": {"t": 101095.0, "r": 37332.51, "c": 0.33}, "Feb-26": {"t": 83406.0, "r": 30230.49, "c": 0.35}, "Mar-26": {"t": 99337.0, "r": 36999.56, "c": 0.39}, "Abr-26": {"t": 95286.0, "r": 36006.15, "c": 354262.02}, "May-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jun-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jul-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Ago-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Sep-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Oct-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Nov-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Dic-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Acumulado 2026": {"t": 379124.0, "r": 140568712681.0, "c": 1423740.0}}}, {"canal": "Direct Debit", "subcanal": "Credit Card", "entidad": "American Express", "fees": "%", "meses": {"Ene-24": {"t": 17864.0, "r": 1182401185.0, "c": 10641611.0}, "Feb-24": {"t": 15268.0, "r": 1032740294.0, "c": 9294663.0}, "Mar-24": {"t": 13975.0, "r": 1753278977.0, "c": 15779511.0}, "Abr-24": {"t": 16722.0, "r": 3657424374.0, "c": 32916819.0}, "May-24": {"t": 16833.0, "r": 3164838064.0, "c": 28483543.0}, "Jun-24": {"t": 12816.0, "r": 2305593843.0, "c": 19862430.0}, "Jul-24": {"t": 17.39, "r": 3567.44, "c": 31.93}, "Ago-24": {"t": 15664.0, "r": 3574.43, "c": 30.39}, "Sep-24": {"t": 15639.0, "r": 3600.18, "c": 36.25}, "Oct-24": {"t": 16381.0, "r": 3716.81, "c": 29.6}, "Nov-24": {"t": 14613.0, "r": 3269.86, "c": 27.28}, "Dic-24": {"t": 14338.0, "r": 3484.53, "c": 38.11}, "Acumulado 2024": {"t": 187503.0, "r": 34309533656.0, "c": 310528806.0}, "Ene-25": {"t": 17.4, "r": 4470.35, "c": 32.62}, "Feb-25": {"t": 12889.0, "r": 3400.78, "c": 35.33}, "Mar-25": {"t": 14718.0, "r": 3950.69, "c": 31.2}, "Abr-25": {"t": 14334.0, "r": 4180.03, "c": 35.81}, "May-25": {"t": 17347.0, "r": 4331.35, "c": 40.28}, "Jun-25": {"t": 14225.0, "r": 3723.42, "c": 35.04}, "Jul-25": {"t": 16686.0, "r": 4747.19, "c": 37.48}, "Ago-25": {"t": 14814.0, "r": 4497.8, "c": 40.4}, "Sep-25": {"t": 15044.0, "r": 4579.79, "c": 49.51}, "Oct-25": {"t": 16725.0, "r": 5137.79, "c": 35.88}, "Nov-25": {"t": 11901.0, "r": 3604.45, "c": 37.16}, "Dic-25": {"t": 16623.0, "r": 4812.26, "c": 45.7}, "Acumulado 2025": {"t": 182706.0, "r": 51435900580.0, "c": 456404168.0}, "Ene-26": {"t": 15645.0, "r": 5998.01, "c": 45.31}, "Feb-26": {"t": 13441.0, "r": 5036.81, "c": 41.79}, "Mar-26": {"t": 13611.0, "r": 5012.91, "c": 60.27}, "Abr-26": {"t": 15551.0, "r": 5649.09, "c": 50841824.07}, "May-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jun-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jul-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Ago-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Sep-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Oct-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Nov-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Dic-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Acumulado 2026": {"t": 58248.0, "r": 21696824602.0, "c": 198222285.0}}}, {"canal": "Direct Debit", "subcanal": "Credit Card", "entidad": "Cabal", "fees": "%", "meses": {"Ene-24": {"t": 513.0, "r": 3014113.0, "c": 9042.0}, "Feb-24": {"t": 401.0, "r": 2869939.0, "c": 8.61}, "Mar-24": {"t": 361.0, "r": 3155537.0, "c": 9467.0}, "Abr-24": {"t": 481.0, "r": 8375901.0, "c": 25128.0}, "May-24": {"t": 458.0, "r": 8616496.0, "c": 25849.0}, "Jun-24": {"t": 308.0, "r": 4982132.0, "c": 19638.0}, "Jul-24": {"t": 471.0, "r": 9.33, "c": 0.02}, "Ago-24": {"t": 401.0, "r": 12.34, "c": 0.03}, "Sep-24": {"t": 393.0, "r": 12.68, "c": 0.04}, "Oct-24": {"t": 398.0, "r": 11.42, "c": 0.04}, "Nov-24": {"t": 349.0, "r": 8.68, "c": 0.03}, "Dic-24": {"t": 350.0, "r": 8.71, "c": 0.03}, "Acumulado 2024": {"t": 4884.0, "r": 94182385.0, "c": 280029.0}, "Ene-25": {"t": 401.0, "r": 10.18, "c": 0.03}, "Feb-25": {"t": 302.0, "r": 10.29, "c": 0.03}, "Mar-25": {"t": 342.0, "r": 12.93, "c": 0.03}, "Abr-25": {"t": 322.0, "r": 13.23, "c": 0.04}, "May-25": {"t": 415.0, "r": 15.3, "c": 0.04}, "Jun-25": {"t": 305.0, "r": 9.74, "c": 0.05}, "Jul-25": {"t": 381.0, "r": 13.48, "c": 0.03}, "Ago-25": {"t": 343.0, "r": 16.03, "c": 0.04}, "Sep-25": {"t": 312.0, "r": 15.11, "c": 0.07}, "Oct-25": {"t": 340.0, "r": 15.45, "c": 0.04}, "Nov-25": {"t": 274.0, "r": 12.85, "c": 0.04}, "Dic-25": {"t": 351.0, "r": 15.91, "c": 0.04}, "Acumulado 2025": {"t": 4088.0, "r": 160504383.0, "c": 479792.0}, "Ene-26": {"t": 327.0, "r": 24.57, "c": 0.04}, "Feb-26": {"t": 271.0, "r": 19.74, "c": 0.08}, "Mar-26": {"t": 296.0, "r": 19.31, "c": 0.06}, "Abr-26": {"t": 291.0, "r": 16.93, "c": 50777.88}, "May-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jun-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jul-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Ago-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Sep-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Oct-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Nov-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Dic-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Acumulado 2026": {"t": 1185.0, "r": 80544415.0, "c": 229909.0}}}, {"canal": "Direct Debit", "subcanal": "Credit Card", "entidad": "Mastercard", "fees": "%", "meses": {"Ene-24": {"t": 14551.0, "r": 102872869.0, "c": 1028729.0}, "Feb-24": {"t": 12295.0, "r": 103030922.0, "c": 1030309.0}, "Mar-24": {"t": 11349.0, "r": 112321066.0, "c": 1123211.0}, "Abr-24": {"t": 13879.0, "r": 290442382.0, "c": 2904424.0}, "May-24": {"t": 13606.0, "r": 294436113.0, "c": 2944361.0}, "Jun-24": {"t": 10859.0, "r": 221106441.0, "c": 2234161.0}, "Jul-24": {"t": 15267.0, "r": 366.64, "c": 2.46}, "Ago-24": {"t": 13805.0, "r": 488.99, "c": 3.52}, "Sep-24": {"t": 13826.0, "r": 523.89, "c": 5.11}, "Oct-24": {"t": 14761.0, "r": 511.72, "c": 5.26}, "Nov-24": {"t": 12659.0, "r": 340.06, "c": 4.56}, "Dic-24": {"t": 12918.0, "r": 348.99, "c": 4.63}, "Acumulado 2024": {"t": 159775.0, "r": 3704502261.0, "c": 36803628.0}, "Ene-25": {"t": 16059.000000000002, "r": 466.49, "c": 2.44}, "Feb-25": {"t": 12012.0, "r": 411.62, "c": 4.66}, "Mar-25": {"t": 13881.0, "r": 596.24, "c": 3.81}, "Abr-25": {"t": 13498.0, "r": 632.54, "c": 6.19}, "May-25": {"t": 16367.0, "r": 656.11, "c": 5.92}, "Jun-25": {"t": 13313.0, "r": 436.88, "c": 6.95}, "Jul-25": {"t": 15495.0, "r": 646.31, "c": 4.82}, "Ago-25": {"t": 14213.0, "r": 774.93, "c": 6.0}, "Sep-25": {"t": 14447.0, "r": 787.65, "c": 8.92}, "Oct-25": {"t": 15866.0, "r": 765.57, "c": 7.09}, "Nov-25": {"t": 11965.0, "r": 494.66, "c": 6.55}, "Dic-25": {"t": 16084.0, "r": 726.12, "c": 6.01}, "Acumulado 2025": {"t": 173.2, "r": 7395123868.0, "c": 69354959.0}, "Ene-26": {"t": 15467.0, "r": 1125.82, "c": 6.56}, "Feb-26": {"t": 12074.0, "r": 826.37, "c": 11.6}, "Mar-26": {"t": 14164.0, "r": 891.47, "c": 8.26}, "Abr-26": {"t": 15547.0, "r": 809.04, "c": 8090433.11}, "May-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jun-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jul-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Ago-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Sep-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Oct-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Nov-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Dic-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Acumulado 2026": {"t": 57252.0, "r": 3652696640.0, "c": 34504074.0}}}, {"canal": "Direct Debit", "subcanal": "Credit Card", "entidad": "Visa", "fees": "%", "meses": {"Ene-24": {"t": 94478.0, "r": 705752159.0, "c": 7057522.0}, "Feb-24": {"t": 79683.0, "r": 710600300.0, "c": 7106003.0}, "Mar-24": {"t": 80529.0, "r": 812602598.0, "c": 8126026.0}, "Abr-24": {"t": 96102.0, "r": 2774139263.0, "c": 27741393.0}, "May-24": {"t": 87037.0, "r": 2270290982.0, "c": 22702910.0}, "Jun-24": {"t": 65307.0, "r": 1657548606.0, "c": 17412261.0}, "Jul-24": {"t": 101967.0, "r": 2720.41, "c": 21.35}, "Ago-24": {"t": 90606.0, "r": 3593.97, "c": 26.94}, "Sep-24": {"t": 87162.0, "r": 3830.61, "c": 38.17}, "Oct-24": {"t": 93.66, "r": 3895.22, "c": 40.69}, "Nov-24": {"t": 82228.0, "r": 2683.88, "c": 32.14}, "Dic-24": {"t": 84866.0, "r": 2759.7, "c": 28.6}, "Acumulado 2024": {"t": 1043625.0, "r": 28414727194.0, "c": 278042164.0}, "Ene-25": {"t": 95464.0, "r": 3352.78, "c": 27.16}, "Feb-25": {"t": 78497.0, "r": 3216.33, "c": 35.08}, "Mar-25": {"t": 74374.0, "r": 3521.31, "c": 26.63}, "Abr-25": {"t": 85745.0, "r": 4900.38, "c": 46.69}, "May-25": {"t": 94394.0, "r": 4446.78, "c": 48.3}, "Jun-25": {"t": 78298.0, "r": 2924.17, "c": 39.17}, "Jul-25": {"t": 102059.0, "r": 4390.72, "c": 35.65}, "Ago-25": {"t": 84191.0, "r": 4779.85, "c": 42.89}, "Sep-25": {"t": 89811.0, "r": 5302.17, "c": 58.27}, "Oct-25": {"t": 92886.0, "r": 5030.44, "c": 45.86}, "Nov-25": {"t": 74242.0, "r": 3394.68, "c": 43.14}, "Dic-25": {"t": 96104.0, "r": 4636.2, "c": 39.06}, "Acumulado 2025": {"t": 1046065.0, "r": 49895809812.0, "c": 487913335.0}, "Ene-26": {"t": 89603.0, "r": 6903.23, "c": 41.96}, "Feb-26": {"t": 76494.0, "r": 5914.65, "c": 80.31}, "Mar-26": {"t": 88894.0, "r": 6381.59, "c": 58.92}, "Abr-26": {"t": 86156.0, "r": 5045.32, "c": 50453188.32}, "May-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jun-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jul-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Ago-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Sep-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Oct-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Nov-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Dic-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Acumulado 2026": {"t": 341147.0, "r": 24244788637.0, "c": 231647068.0}}}, {"canal": "Non Real Time", "subcanal": "Bank presential", "entidad": "Bco. Ciudad", "fees": "FIX", "meses": {"Ene-24": {"t": 38.0, "r": 338.33, "c": 30.0}, "Feb-24": {"t": 29.0, "r": 162021.0, "c": 23.0}, "Mar-24": {"t": 46.0, "r": 3261936.0, "c": 37.0}, "Abr-24": {"t": 40.0, "r": 2448304.0, "c": 32.0}, "May-24": {"t": 44.0, "r": 2060568.0, "c": 35.0}, "Jun-24": {"t": 26.0, "r": 1541446.0, "c": 21.0}, "Jul-24": {"t": 30.0, "r": 0.49, "c": 0.0}, "Ago-24": {"t": 21.0, "r": 1.05, "c": 0.0}, "Sep-24": {"t": 32.0, "r": 2.06, "c": 0.0}, "Oct-24": {"t": 32.0, "r": 2.05, "c": 0.0}, "Nov-24": {"t": 30.0, "r": 2.71, "c": 0.0}, "Dic-24": {"t": 29.0, "r": 5.87, "c": 0.0}, "Acumulado 2024": {"t": 397.0, "r": 24037497.0, "c": 318.0}, "Ene-25": {"t": 31.0, "r": 0.73, "c": 0.0}, "Feb-25": {"t": 28.0, "r": 0.7, "c": 0.0}, "Mar-25": {"t": 24.0, "r": 2.59, "c": 0.0}, "Abr-25": {"t": 21.0, "r": 1.9, "c": 0.0}, "May-25": {"t": 24.0, "r": 2.32, "c": 0.0}, "Jun-25": {"t": 31.0, "r": 2.34, "c": 0.0}, "Jul-25": {"t": 34.0, "r": 2.83, "c": 0.0}, "Ago-25": {"t": 25.0, "r": 2.67, "c": 0.0}, "Sep-25": {"t": 22.0, "r": 3.02, "c": 0.0}, "Oct-25": {"t": 25.0, "r": 3.14, "c": 0.0}, "Nov-25": {"t": 22.0, "r": 2.68, "c": 0.0}, "Dic-25": {"t": 21.0, "r": 3.01, "c": 0.0}, "Acumulado 2025": {"t": 308.0, "r": 27925253.0, "c": 246.0}, "Ene-26": {"t": 19.0, "r": 3.19, "c": 0.0}, "Feb-26": {"t": 17.0, "r": 5.88, "c": 0.0}, "Mar-26": {"t": 15.0, "r": 3.5, "c": 0.0}, "Abr-26": {"t": 19.0, "r": 2.81, "c": 15.2}, "May-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jun-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jul-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Ago-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Sep-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Oct-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Nov-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Dic-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Acumulado 2026": {"t": 70.0, "r": 15381798.0, "c": 52.0}}}, {"canal": "Non Real Time", "subcanal": "Bank presential", "entidad": "Bco. Credicoop", "fees": "FIX", "meses": {"Ene-24": {"t": 10.0, "r": 3255435.0, "c": 8.0}, "Feb-24": {"t": 6.0, "r": 2169266.0, "c": 5.0}, "Mar-24": {"t": 30.0, "r": 39574042.0, "c": 23.0}, "Abr-24": {"t": 43.0, "r": 69793973.0, "c": 32.0}, "May-24": {"t": 35.0, "r": 44410402.0, "c": 26.0}, "Jun-24": {"t": 26.0, "r": 33817816.0, "c": 20.0}, "Jul-24": {"t": 35.0, "r": 50.53, "c": 0.0}, "Ago-24": {"t": 18.0, "r": 39.66, "c": 0.0}, "Sep-24": {"t": 23.0, "r": 36.13, "c": 0.0}, "Oct-24": {"t": 16.0, "r": 36.29, "c": 0.0}, "Nov-24": {"t": 13.0, "r": 33.07, "c": 0.0}, "Dic-24": {"t": 23.0, "r": 40.96, "c": 0.0}, "Acumulado 2024": {"t": 278.0, "r": 429668843.0, "c": 209.0}, "Ene-25": {"t": 21.0, "r": 25.66, "c": 0.0}, "Feb-25": {"t": 16.0, "r": 27.0, "c": 0.0}, "Mar-25": {"t": 19.0, "r": 31.12, "c": 0.0}, "Abr-25": {"t": 18.0, "r": 21.36, "c": 0.0}, "May-25": {"t": 20.0, "r": 33.34, "c": 0.0}, "Jun-25": {"t": 14.0, "r": 23.23, "c": 0.0}, "Jul-25": {"t": 27.0, "r": 52.8, "c": 0.0}, "Ago-25": {"t": 13.0, "r": 34.61, "c": 0.0}, "Sep-25": {"t": 11.0, "r": 16.94, "c": 0.0}, "Oct-25": {"t": 11.0, "r": 22.6, "c": 0.0}, "Nov-25": {"t": 8.0, "r": 10.61, "c": 0.0}, "Dic-25": {"t": 11.0, "r": 24.16, "c": 0.0}, "Acumulado 2025": {"t": 189.0, "r": 323439709.0, "c": 2171.0}, "Ene-26": {"t": 12.0, "r": 38.02, "c": 0.0}, "Feb-26": {"t": 10.0, "r": 8.45, "c": 0.0}, "Mar-26": {"t": 13.0, "r": 25.08, "c": 0.0}, "Abr-26": {"t": 10.0, "r": 29.8, "c": 7.5}, "May-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jun-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jul-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Ago-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Sep-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Oct-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Nov-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Dic-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Acumulado 2026": {"t": 45.0, "r": 101338966.0, "c": 32.0}}}, {"canal": "Non Real Time", "subcanal": "Bank presential", "entidad": "Bco. Itaú", "fees": "%", "meses": {"Ene-24": {"t": 3.0, "r": 26818.0, "c": 0.0}, "Feb-24": {"t": 4.0, "r": 22548.0, "c": 0}, "Mar-24": {"t": 6.0, "r": 847012.0, "c": 0}, "Abr-24": {"t": 7.0, "r": 213772.0, "c": 0}, "May-24": {"t": 7.0, "r": 720676.0, "c": 0}, "Jun-24": {"t": 6.0, "r": 179563.0, "c": 0}, "Jul-24": {"t": 4.0, "r": 2.73, "c": 0}, "Ago-24": {"t": 5.0, "r": 1.86, "c": 0}, "Sep-24": {"t": 8.0, "r": 0.14, "c": 0}, "Oct-24": {"t": 4.0, "r": 0.08, "c": 0}, "Nov-24": {"t": 1.0, "r": 1.66, "c": 0}, "Dic-24": {"t": 0.0, "r": 0.0, "c": 0}, "Acumulado 2024": {"t": 55.0, "r": 8477222.0, "c": 0.0}, "Ene-25": {"t": 0.0, "r": 0.0, "c": 0.0}, "Feb-25": {"t": 0.0, "r": 0.0, "c": 0.0}, "Mar-25": {"t": 0.0, "r": 0.0, "c": 0.0}, "Abr-25": {"t": 0.0, "r": 0.0, "c": 0.0}, "May-25": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jun-25": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jul-25": {"t": 0.0, "r": 0.0, "c": 0.0}, "Ago-25": {"t": 0.0, "r": 0.0, "c": 0.0}, "Sep-25": {"t": 0.0, "r": 0.0, "c": 0.0}, "Oct-25": {"t": 0.0, "r": 0.0, "c": 0.0}, "Nov-25": {"t": 0.0, "r": 0.0, "c": 0.0}, "Dic-25": {"t": 0.0, "r": 0.0, "c": 0.0}, "Acumulado 2025": {"t": 0.0, "r": 0.0, "c": 0.0}, "Ene-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Feb-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Mar-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Abr-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "May-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jun-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jul-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Ago-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Sep-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Oct-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Nov-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Dic-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Acumulado 2026": {"t": 0.0, "r": 0.0, "c": 0.0}}}, {"canal": "Non Real Time", "subcanal": "Bank presential", "entidad": "Bco. Patagonia", "fees": "%", "meses": {"Ene-24": {"t": 18.0, "r": 2271894.0, "c": 15903.0}, "Feb-24": {"t": 13.0, "r": 1469229.0, "c": 10285.0}, "Mar-24": {"t": 23.0, "r": 9961892.0, "c": 69.76}, "Abr-24": {"t": 31.0, "r": 15950717.0, "c": 111628.0}, "May-24": {"t": 21.0, "r": 12745517.0, "c": 89219.0}, "Jun-24": {"t": 10.0, "r": 5490983.0, "c": 38437.0}, "Jul-24": {"t": 18.0, "r": 10.06, "c": 0.07}, "Ago-24": {"t": 15.0, "r": 8.6, "c": 0.06}, "Sep-24": {"t": 12.0, "r": 7.49, "c": 0.05}, "Oct-24": {"t": 13.0, "r": 13.64, "c": 0.1}, "Nov-24": {"t": 8.0, "r": 4.95, "c": 0.03}, "Dic-24": {"t": 15.0, "r": 10.25, "c": 0.07}, "Acumulado 2024": {"t": 197.0, "r": 102889187.0, "c": 720224.0}, "Ene-25": {"t": 10.0, "r": 9.99, "c": 0.07}, "Feb-25": {"t": 14.0, "r": 17.13, "c": 0.12}, "Mar-25": {"t": 13.0, "r": 20.69, "c": 0.14}, "Abr-25": {"t": 11.0, "r": 18.7, "c": 0.13}, "May-25": {"t": 11.0, "r": 17.29, "c": 0.12}, "Jun-25": {"t": 9.0, "r": 6.47, "c": 0.05}, "Jul-25": {"t": 9.0, "r": 5.93, "c": 0.04}, "Ago-25": {"t": 4.0, "r": 2.56, "c": 0.02}, "Sep-25": {"t": 5.0, "r": 4.12, "c": 0.03}, "Oct-25": {"t": 7.0, "r": 1.26, "c": 0.01}, "Nov-25": {"t": 4.0, "r": 1.06, "c": 0.01}, "Dic-25": {"t": 3.0, "r": 1.2, "c": 0.01}, "Acumulado 2025": {"t": 100.0, "r": 106412922.0, "c": 744.89}, "Ene-26": {"t": 13.0, "r": 6.82, "c": 0.05}, "Feb-26": {"t": 8.0, "r": 2.84, "c": 0.02}, "Mar-26": {"t": 8.0, "r": 1.76, "c": 0.01}, "Abr-26": {"t": 7.0, "r": 1.7, "c": 11915.08}, "May-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jun-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jul-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Ago-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Sep-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Oct-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Nov-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Dic-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Acumulado 2026": {"t": 36.0, "r": 13130657.0, "c": 91915.0}}}, {"canal": "Non Real Time", "subcanal": "Post", "entidad": "Banelco", "fees": "%", "meses": {"Ene-24": {"t": 512025.99999999994, "r": 4096697256.0, "c": 22620711.0}, "Feb-24": {"t": 441266.0, "r": 4049838277.0, "c": 22611013.0}, "Mar-24": {"t": 435136.0, "r": 4225415704.0, "c": 25595148.0}, "Abr-24": {"t": 468785.0, "r": 8401114330.0, "c": 49096933.0}, "May-24": {"t": 490.99, "r": 10411632186.0, "c": 61411403.0}, "Jun-24": {"t": 382773.0, "r": 8800189773.0, "c": 48808454.0}, "Jul-24": {"t": 535651.0, "r": 13214.38, "c": 74.54}, "Ago-24": {"t": 473473.0, "r": 17818.47, "c": 97.41}, "Sep-24": {"t": 448536.0, "r": 19109.86, "c": 104.34}, "Oct-24": {"t": 486117.0, "r": 19834.64, "c": 108.03}, "Nov-24": {"t": 419176.0, "r": 14696.26, "c": 77.65}, "Dic-24": {"t": 443.79, "r": 15080.6, "c": 81.66}, "Acumulado 2024": {"t": 5537719.0, "r": 139739099888.0, "c": 773768931.0}, "Ene-25": {"t": 484153.0, "r": 17276.7, "c": 96.35}, "Feb-25": {"t": 410.29, "r": 16455.47, "c": 92.26}, "Mar-25": {"t": 407573.0, "r": 19096.55, "c": 107.72}, "Abr-25": {"t": 434243.0, "r": 22423.86, "c": 127.19}, "May-25": {"t": 467266.0, "r": 21982.6, "c": 124.08}, "Jun-25": {"t": 398.16, "r": 15927.25, "c": 88.44}, "Jul-25": {"t": 515508.00000000006, "r": 22392.09, "c": 126.35}, "Ago-25": {"t": 416406.0, "r": 23359.69, "c": 131.88}, "Sep-25": {"t": 425609.0, "r": 26354.67, "c": 145.4}, "Oct-25": {"t": 429281.0, "r": 25233.53, "c": 138.36}, "Nov-25": {"t": 380455.0, "r": 19820.67, "c": 106.72}, "Dic-25": {"t": 501463.0, "r": 28162.66, "c": 151.71}, "Acumulado 2025": {"t": 5270407.0, "r": 258485753916.0, "c": 1436461225.0}, "Ene-26": {"t": 437419.0, "r": 34877.06, "c": 191.85}, "Feb-26": {"t": 391142.0, "r": 31417.52, "c": 174.32}, "Mar-26": {"t": 430464.0, "r": 32510.14, "c": 178.06}, "Abr-26": {"t": 446901.0, "r": 29574.67, "c": 160034836.2}, "May-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jun-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jul-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Ago-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Sep-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Oct-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Nov-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Dic-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Acumulado 2026": {"t": 1705926.0, "r": 128379387413.0, "c": 704269949.0}}}, {"canal": "Non Real Time", "subcanal": "Post", "entidad": "Red Link", "fees": "%", "meses": {"Ene-24": {"t": 234404.0, "r": 2403086699.0, "c": 9643692.0}, "Feb-24": {"t": 201673.0, "r": 2257498938.0, "c": 8520667.0}, "Mar-24": {"t": 207292.0, "r": 2799919255.0, "c": 9175103.0}, "Abr-24": {"t": 236024.0, "r": 5639177324.0, "c": 10405180.0}, "May-24": {"t": 211335.0, "r": 5638694185.0, "c": 9876302.0}, "Jun-24": {"t": 187007.0, "r": 4660338967.0, "c": 8758554.0}, "Jul-24": {"t": 253.44, "r": 6761.1, "c": 11.95}, "Ago-24": {"t": 221.72, "r": 7931.38, "c": 10.73}, "Sep-24": {"t": 214498.0, "r": 8404.67, "c": 10.41}, "Oct-24": {"t": 219.11, "r": 8154.79, "c": 11.94}, "Nov-24": {"t": 196054.0, "r": 6190.26, "c": 14.24}, "Dic-24": {"t": 201894.0, "r": 6017.36, "c": 14.95}, "Acumulado 2024": {"t": 2584451.0, "r": 66858279280.0, "c": 130607535.0}, "Ene-25": {"t": 214755.0, "r": 6934.26, "c": 16.0}, "Feb-25": {"t": 175131.0, "r": 6146.05, "c": 13.07}, "Mar-25": {"t": 194933.0, "r": 7976.29, "c": 14.73}, "Abr-25": {"t": 193247.0, "r": 8324.25, "c": 14.7}, "May-25": {"t": 214206.0, "r": 8745.71, "c": 16.29}, "Jun-25": {"t": 167864.0, "r": 5661.75, "c": 12.59}, "Jul-25": {"t": 235547.0, "r": 9124.48, "c": 17.96}, "Ago-25": {"t": 189.02, "r": 9264.07, "c": 14.53}, "Sep-25": {"t": 205045.0, "r": 10481.16, "c": 15.62}, "Oct-25": {"t": 203239.0, "r": 9818.64, "c": 22682261.29}, "Nov-25": {"t": 145345.0, "r": 6055.35, "c": 16.36}, "Dic-25": {"t": 216422.0, "r": 9992.73, "c": 24.55}, "Acumulado 2025": {"t": 2354754.0, "r": 98524746626.0, "c": 199107285.0}, "Ene-26": {"t": 189471.0, "r": 11607.53, "c": 21.84}, "Feb-26": {"t": 171952.0, "r": 10650.59, "c": 19.8}, "Mar-26": {"t": 192518.0, "r": 10929.25, "c": 22.01}, "Abr-26": {"t": 191076.0, "r": 9480.09, "c": 21644411.46}, "May-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jun-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jul-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Ago-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Sep-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Oct-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Nov-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Dic-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Acumulado 2026": {"t": 745017.0, "r": 42667453883.0, "c": 85297877.0}}}, {"canal": "Non Real Time", "subcanal": "Bank Transfer", "entidad": "Visa PMC", "fees": "%", "meses": {"Ene-24": {"t": 11592.0, "r": 89007693.0, "c": 872978.0}, "Feb-24": {"t": 10799.0, "r": 99006676.0, "c": 972959.0}, "Mar-24": {"t": 12612.0, "r": 133403374.0, "c": 1381607.0}, "Abr-24": {"t": 15524.0, "r": 325625480.0, "c": 3193888.0}, "May-24": {"t": 15952.0, "r": 391787552.0, "c": 3902980.0}, "Jun-24": {"t": 11993.0, "r": 275187909.0, "c": 2708609.0}, "Jul-24": {"t": 16030.999999999998, "r": 408.48, "c": 4.02}, "Ago-24": {"t": 16557.0, "r": 659.38, "c": 6.51}, "Sep-24": {"t": 16654.0, "r": 764.18, "c": 7.55}, "Oct-24": {"t": 19108.0, "r": 822.65, "c": 8.1}, "Nov-24": {"t": 18063.0, "r": 593.05, "c": 5.81}, "Dic-24": {"t": 15126.0, "r": 469.88, "c": 4.6}, "Acumulado 2024": {"t": 180011.0, "r": 5031646840.0, "c": 49625735.0}, "Ene-25": {"t": 15419.0, "r": 517.1, "c": 5.17}, "Feb-25": {"t": 14413.0, "r": 580.45, "c": 5.67}, "Mar-25": {"t": 15244.0, "r": 755.01, "c": 7.42}, "Abr-25": {"t": 17128.0, "r": 951.1, "c": 9.51}, "May-25": {"t": 17814.0, "r": 881.1, "c": 8.81}, "Jun-25": {"t": 14546.0, "r": 560.77, "c": 5.61}, "Jul-25": {"t": 18607.0, "r": 822.86, "c": 8.23}, "Ago-25": {"t": 16759.0, "r": 1030.64, "c": 10.31}, "Sep-25": {"t": 17878.0, "r": 1178.68, "c": 11.79}, "Oct-25": {"t": 18263.0, "r": 1091.79, "c": 10.92}, "Nov-25": {"t": 15837.0, "r": 789.19, "c": 7.89}, "Dic-25": {"t": 18136.0, "r": 910.42, "c": 9.1}, "Acumulado 2025": {"t": 200044.0, "r": 10069090138.0, "c": 100428143.0}, "Ene-26": {"t": 18323.0, "r": 1464.67, "c": 14.07}, "Feb-26": {"t": 15.5, "r": 1285.11, "c": 12.85}, "Mar-26": {"t": 18.28, "r": 1437.43, "c": 14.37}, "Abr-26": {"t": 18345.0, "r": 1175.69, "c": 11756929.7}, "May-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jun-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jul-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Ago-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Sep-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Oct-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Nov-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Dic-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Acumulado 2026": {"t": 70448.0, "r": 5362906795.0, "c": 53049384.0}}}, {"canal": "Non Real Time", "subcanal": "Bank Transfer", "entidad": "Amex PMC", "fees": "%", "meses": {"Ene-24": {"t": 583.0, "r": 5696471.0, "c": 51268.0}, "Feb-24": {"t": 608.0, "r": 6149876.0, "c": 55349.0}, "Mar-24": {"t": 889.0, "r": 10362900.0, "c": 95819.0}, "Abr-24": {"t": 797.0, "r": 17836673.0, "c": 157977.0}, "May-24": {"t": 808.0, "r": 22658808.0, "c": 203929.0}, "Jun-24": {"t": 696.0, "r": 20152997.0, "c": 181377.0}, "Jul-24": {"t": 902.0, "r": 28.16, "c": 0.25}, "Ago-24": {"t": 1.05, "r": 50.7, "c": 0.46}, "Sep-24": {"t": 1065.0, "r": 56.01, "c": 0.5}, "Oct-24": {"t": 1219.0, "r": 62.39, "c": 0.56}, "Nov-24": {"t": 1006.0, "r": 37.16, "c": 0.33}, "Dic-24": {"t": 957.0, "r": 35.18, "c": 0.32}, "Acumulado 2024": {"t": 10.58, "r": 352450490.0, "c": 3172054.0}, "Ene-25": {"t": 1046.0, "r": 40.18, "c": 0.36}, "Feb-25": {"t": 988.0, "r": 45.22, "c": 0.4}, "Mar-25": {"t": 1.01, "r": 60.98, "c": 0.54}, "Abr-25": {"t": 1124.0, "r": 69.54, "c": 0.63}, "May-25": {"t": 1134.0, "r": 62.48, "c": 0.56}, "Jun-25": {"t": 941.0, "r": 43.52, "c": 0.39}, "Jul-25": {"t": 1201.0, "r": 65.62, "c": 0.59}, "Ago-25": {"t": 1094.0, "r": 76.28, "c": 0.69}, "Sep-25": {"t": 1168.0, "r": 95.8, "c": 0.86}, "Oct-25": {"t": 1168.0, "r": 84.88, "c": 0.76}, "Nov-25": {"t": 862.0, "r": 45.4, "c": 0.41}, "Dic-25": {"t": 1222.0, "r": 75.62, "c": 0.68}, "Acumulado 2025": {"t": 12958.0, "r": 765518554.0, "c": 6867970.0}, "Ene-26": {"t": 1.14, "r": 106.62, "c": 0.93}, "Feb-26": {"t": 1029.0, "r": 98.33, "c": 0.88}, "Mar-26": {"t": 1069.0, "r": 100.6, "c": 0.91}, "Abr-26": {"t": 1.05, "r": 80.71, "c": 726395.54}, "May-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jun-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jul-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Ago-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Sep-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Oct-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Nov-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Dic-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Acumulado 2026": {"t": 4288.0, "r": 386261786.0, "c": 3442198.0}}}, {"canal": "Non Real Time", "subcanal": "Bank Transfer", "entidad": "Transferencias", "fees": "NO FEES / FIX", "meses": {"Ene-24": {"t": 9955.0, "r": 8792497096.0, "c": 0.0}, "Feb-24": {"t": 8244.0, "r": 7934669457.0, "c": 0.0}, "Mar-24": {"t": 10228.0, "r": 16851426896.0, "c": 0.0}, "Abr-24": {"t": 16018.999999999998, "r": 32606700009.0, "c": 4400000.0}, "May-24": {"t": 16023.0, "r": 30381842734.0, "c": 6618468.0}, "Jun-24": {"t": 11311.0, "r": 25190672083.0, "c": 5616191.0}, "Jul-24": {"t": 14791.0, "r": 34746.01, "c": 6.37}, "Ago-24": {"t": 12636.0, "r": 36010.21, "c": 6.11}, "Sep-24": {"t": 12415.0, "r": 37107.39, "c": 6.84}, "Oct-24": {"t": 12229.0, "r": 36545.73, "c": 5.53}, "Nov-24": {"t": 10595.0, "r": 31713.25, "c": 6.32}, "Dic-24": {"t": 10381.0, "r": 34831.16, "c": 4.86}, "Acumulado 2024": {"t": 144827.0, "r": 332711560707.0, "c": 52671909.0}, "Ene-25": {"t": 12648.0, "r": 37658.99, "c": 3.65}, "Feb-25": {"t": 10411.0, "r": 33636.53, "c": 4.54}, "Mar-25": {"t": 11.61, "r": 36870.11, "c": 1.7}, "Abr-25": {"t": 13805.0, "r": 40339.33, "c": 5.06}, "May-25": {"t": 14352.0, "r": 40086.12, "c": 4.75}, "Jun-25": {"t": 11734.0, "r": 36732.41, "c": 5.04}, "Jul-25": {"t": 12052.0, "r": 45187.67, "c": 4.81}, "Ago-25": {"t": 12278.0, "r": 48435.62, "c": 5.95}, "Sep-25": {"t": 11603.0, "r": 46312.09, "c": 8.75}, "Oct-25": {"t": 12613.0, "r": 48064.25, "c": 6.61}, "Nov-25": {"t": 8461.0, "r": 37726.82, "c": 4.47}, "Dic-25": {"t": 10318.0, "r": 47259.12, "c": 7.78}, "Acumulado 2025": {"t": 141885.0, "r": 498309058431.0, "c": 63112948.0}, "Ene-26": {"t": 10.39, "r": 45294.56, "c": 6.01}, "Feb-26": {"t": 12434.0, "r": 42656.18, "c": 6.03}, "Mar-26": {"t": 12173.0, "r": 48516.69, "c": 6.1}, "Abr-26": {"t": 11522.0, "r": 53943.02, "c": 8427594.28}, "May-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jun-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jul-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Ago-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Sep-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Oct-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Nov-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Dic-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Acumulado 2026": {"t": 46519.0, "r": 190410449551.0, "c": 26566395.0}}}, {"canal": "Real Time managed by Enel", "subcanal": "Web Enel", "entidad": "Boton de pago Master Debito Prisma", "fees": "%", "meses": {"Ene-24": {"t": 15803.0, "r": 170779522.0, "c": 853898.0}, "Feb-24": {"t": 14567.0, "r": 168542744.0, "c": 842715.0}, "Mar-24": {"t": 13988.0, "r": 242286671.0, "c": 1371348.0}, "Abr-24": {"t": 17192.0, "r": 509770348.0, "c": 2548852.0}, "May-24": {"t": 17.77, "r": 551823750.0, "c": 2759119.0}, "Jun-24": {"t": 15519.0, "r": 485930467.0, "c": 2429653.0}, "Jul-24": {"t": 18119.0, "r": 588.54, "c": 2.94}, "Ago-24": {"t": 17875.0, "r": 621.13, "c": 3.11}, "Sep-24": {"t": 16483.0, "r": 610.74, "c": 3.05}, "Oct-24": {"t": 12323.0, "r": 476.63, "c": 2.33}, "Nov-24": {"t": 10141.0, "r": 388.95, "c": 2.0}, "Dic-24": {"t": 10529.0, "r": 378.52, "c": 1.89}, "Acumulado 2024": {"t": 180309.0, "r": 5193630708.0, "c": 26128070.0}, "Ene-25": {"t": 10264.0, "r": 336.43, "c": 1.68}, "Feb-25": {"t": 9887.0, "r": 369.9, "c": 1.8}, "Mar-25": {"t": 10021.0, "r": 427.72, "c": 2.09}, "Abr-25": {"t": 9731.0, "r": 435.73, "c": 2.18}, "May-25": {"t": 10873.0, "r": 516.57, "c": 2.58}, "Jun-25": {"t": 10817.0, "r": 431.68, "c": 2.16}, "Jul-25": {"t": 9969.0, "r": 306.18, "c": 1.53}, "Ago-25": {"t": 4762.0, "r": 94.28, "c": 0.47}, "Sep-25": {"t": 3481.0, "r": 35.66, "c": 0.18}, "Oct-25": {"t": 1902.0, "r": 20.83, "c": 0.1}, "Nov-25": {"t": 2358.0, "r": 43.28, "c": 0.22}, "Dic-25": {"t": 2232.0, "r": 24.45, "c": 0.12}, "Acumulado 2025": {"t": 86297.0, "r": 3042717690.0, "c": 15105671.0}, "Ene-26": {"t": 1613.0, "r": 17.54, "c": 0.08}, "Feb-26": {"t": 1805.0, "r": 39.59, "c": 0.2}, "Mar-26": {"t": 8315.0, "r": 522.37, "c": 2.61}, "Abr-26": {"t": 6642.0, "r": 233.47, "c": 1167373.33}, "May-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jun-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jul-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Ago-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Sep-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Oct-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Nov-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Dic-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Acumulado 2026": {"t": 18375.0, "r": 812974627.0, "c": 4057010.0}}}, {"canal": "Real Time managed by Enel", "subcanal": "Web Enel", "entidad": "Boton de pago Visa Debito Prisma", "fees": "%", "meses": {"Ene-24": {"t": 114.19, "r": 1336529643.0, "c": 6682649.0}, "Feb-24": {"t": 107727.0, "r": 1336798721.0, "c": 6683997.0}, "Mar-24": {"t": 101668.0, "r": 1745325922.0, "c": 9848022.0}, "Abr-24": {"t": 124223.0, "r": 3938764059.0, "c": 19693823.0}, "May-24": {"t": 125142.0, "r": 4743206085.0, "c": 23715995.0}, "Jun-24": {"t": 108196.0, "r": 3624711113.0, "c": 18123557.0}, "Jul-24": {"t": 123925.0, "r": 4550.76, "c": 22.75}, "Ago-24": {"t": 123873.0, "r": 5518.26, "c": 27.59}, "Sep-24": {"t": 131079.0, "r": 6526.35, "c": 32.63}, "Oct-24": {"t": 129651.99999999999, "r": 5820.92, "c": 27.14}, "Nov-24": {"t": 101512.0, "r": 3695.8, "c": 20.44}, "Dic-24": {"t": 109524.0, "r": 3536.31, "c": 17.68}, "Acumulado 2024": {"t": 1400711.0, "r": 46373745780.0, "c": 232990110.0}, "Ene-25": {"t": 105628.0, "r": 3426.85, "c": 17.13}, "Feb-25": {"t": 106305.0, "r": 4421.77, "c": 23.43}, "Mar-25": {"t": 109118.0, "r": 5352.91, "c": 27.49}, "Abr-25": {"t": 104903.0, "r": 5869.45, "c": 29.35}, "May-25": {"t": 112591.0, "r": 6176.29, "c": 30.88}, "Jun-25": {"t": 109171.0, "r": 5027.68, "c": 25.25}, "Jul-25": {"t": 113538.0, "r": 5961.78, "c": 29.9}, "Ago-25": {"t": 108785.0, "r": 6703.58, "c": 33.57}, "Sep-25": {"t": 109385.0, "r": 7551.98, "c": 38.08}, "Oct-25": {"t": 96665.0, "r": 6727.52, "c": 33.78}, "Nov-25": {"t": 76359.0, "r": 3908.21, "c": 19.54}, "Dic-25": {"t": 87546.0, "r": 4068.04, "c": 20.34}, "Acumulado 2025": {"t": 1239994.0, "r": 65196050757.0, "c": 328746702.0}, "Ene-26": {"t": 82957.0, "r": 5092.33, "c": 24.59}, "Feb-26": {"t": 74822.0, "r": 4736.03, "c": 23.68}, "Mar-26": {"t": 90115.0, "r": 6113.56, "c": 30.57}, "Abr-26": {"t": 95975.0, "r": 6477.42, "c": 32412434.07}, "May-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jun-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jul-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Ago-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Sep-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Oct-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Nov-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Dic-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Acumulado 2026": {"t": 343869.0, "r": 22419343341.0, "c": 111251476.0}}}, {"canal": "Real Time managed by third parties", "subcanal": "Bank Transfer", "entidad": "AUNTAP QR INTEROPERABLE", "fees": "%", "meses": {"Ene-24": {"t": 56.3, "r": 738381225.0, "c": 4430287.0}, "Feb-24": {"t": 51774.0, "r": 745140570.0, "c": 4470844.0}, "Mar-24": {"t": 53583.0, "r": 1095854451.0, "c": 6575127.0}, "Abr-24": {"t": 64590.99999999999, "r": 3500795114.0, "c": 21004772.0}, "May-24": {"t": 66644.0, "r": 3094001240.0, "c": 18564008.0}, "Jun-24": {"t": 56251.0, "r": 2042604117.0, "c": 12255627.0}, "Jul-24": {"t": 67755.0, "r": 2656.94, "c": 15.94}, "Ago-24": {"t": 67004.0, "r": 3142.49, "c": 18.85}, "Sep-24": {"t": 64235.0, "r": 3385.66, "c": 20.31}, "Oct-24": {"t": 71193.0, "r": 3378.98, "c": 19.68}, "Nov-24": {"t": 66755.0, "r": 2849.57, "c": 17.69}, "Dic-24": {"t": 68863.0, "r": 2608.08, "c": 15.65}, "Acumulado 2024": {"t": 754948.0, "r": 29238495174.0, "c": 175430985.0}, "Ene-25": {"t": 65763.0, "r": 2523.51, "c": 15.14}, "Feb-25": {"t": 67897.0, "r": 2742.37, "c": 15.92}, "Mar-25": {"t": 65458.0, "r": 2935.37, "c": 17.09}, "Abr-25": {"t": 65939.0, "r": 3441.72, "c": 20.65}, "May-25": {"t": 68668.0, "r": 3432.97, "c": 20.6}, "Jun-25": {"t": 73423.0, "r": 3201.25, "c": 19.21}, "Jul-25": {"t": 77001.0, "r": 3765.55, "c": 22.59}, "Ago-25": {"t": 66169.0, "r": 3854.88, "c": 23.13}, "Sep-25": {"t": 67573.0, "r": 4167.33, "c": 25.0}, "Oct-25": {"t": 88242.0, "r": 5144.53, "c": 30.87}, "Nov-25": {"t": 81269.0, "r": 4329.34, "c": 25.98}, "Dic-25": {"t": 95249.0, "r": 5132.97, "c": 30.8}, "Acumulado 2025": {"t": 882651.0, "r": 44671788967.0, "c": 266975862.0}, "Ene-26": {"t": 85776.0, "r": 6113.86, "c": 34.26}, "Feb-26": {"t": 71777.0, "r": 5417.99, "c": 32.51}, "Mar-26": {"t": 84928.0, "r": 6134.24, "c": 36.81}, "Abr-26": {"t": 91412.0, "r": 5660.46, "c": 33962766.9}, "May-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jun-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jul-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Ago-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Sep-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Oct-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Nov-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Dic-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Acumulado 2026": {"t": 333893.0, "r": 23326556599.0, "c": 137537947.0}}}, {"canal": "Real Time managed by third parties", "subcanal": "External Office", "entidad": "Pago Facil", "fees": "MIX", "meses": {"Ene-24": {"t": 858068.0, "r": 8135466659.0, "c": 78945174.0}, "Feb-24": {"t": 784688.0, "r": 8180078274.0, "c": 91186841.0}, "Mar-24": {"t": 788518.0, "r": 9448037643.0, "c": 106741399.0}, "Abr-24": {"t": 902001.0, "r": 19146842965.0, "c": 190868539.0}, "May-24": {"t": 882.32, "r": 26381399646.0, "c": 278044000.0}, "Jun-24": {"t": 734515.0, "r": 21292677149.0, "c": 200318363.0}, "Jul-24": {"t": 942068.0, "r": 28984.75, "c": 301.0}, "Ago-24": {"t": 868518.0, "r": 34370.39, "c": 344.6}, "Sep-24": {"t": 864603.0, "r": 39399.16, "c": 425.34}, "Oct-24": {"t": 904469.0, "r": 41611.0, "c": 455.23}, "Nov-24": {"t": 823197.0, "r": 33952.55, "c": 471.17}, "Dic-24": {"t": 889803.0, "r": 36647.08, "c": 527.3}, "Acumulado 2024": {"t": 10242768.0, "r": 307549431445.0, "c": 3470735304.0}, "Ene-25": {"t": 909711.0, "r": 39630.76, "c": 359.05}, "Feb-25": {"t": 862913.0, "r": 40301.03, "c": 345.15}, "Mar-25": {"t": 870314.0, "r": 46625.99, "c": 1109.74}, "Abr-25": {"t": 872374.0, "r": 51497.89, "c": 768.88}, "May-25": {"t": 947749.0, "r": 52889.9, "c": 475.84}, "Jun-25": {"t": 918247.0, "r": 44866.2, "c": 1027.25}, "Jul-25": {"t": 1067734.0, "r": 56422.47, "c": 1260.1}, "Ago-25": {"t": 929133.0, "r": 58511.35, "c": 368.01}, "Sep-25": {"t": 988649.0, "r": 64994.87, "c": 802.55}, "Oct-25": {"t": 982966.0, "r": 63536.65, "c": 501258454.27}, "Nov-25": {"t": 911063.0, "r": 54191.86, "c": 683.9}, "Dic-25": {"t": 1101967.0, "r": 70647.1, "c": 313.86}, "Acumulado 2025": {"t": 11362820.0, "r": 644116065347.0, "c": 8015584514.0}, "Ene-26": {"t": 1010785.0, "r": 84991.76, "c": 890.89}, "Feb-26": {"t": 909097.0, "r": 79082.11, "c": 812.82}, "Mar-26": {"t": 1080085.0, "r": 89774.2, "c": 1002.6}, "Abr-26": {"t": 1006764.0, "r": 74834.44, "c": 853909128.65}, "May-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jun-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jul-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Ago-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Sep-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Oct-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Nov-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Dic-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Acumulado 2026": {"t": 4006731.0, "r": 328682503592.0, "c": 3560218096.0}}}, {"canal": "Real Time managed by third parties", "subcanal": "External Office", "entidad": "Rapipago", "fees": "MIX", "meses": {"Ene-24": {"t": 317158.0, "r": 2728525028.0, "c": 32196756.0}, "Feb-24": {"t": 264574.0, "r": 2456966453.0, "c": 34820876.0}, "Mar-24": {"t": 267831.0, "r": 2960287415.0, "c": 39448792.0}, "Abr-24": {"t": 306257.0, "r": 6438253704.0, "c": 54898707.0}, "May-24": {"t": 312769.0, "r": 7811594136.0, "c": 86273237.0}, "Jun-24": {"t": 259156.99999999997, "r": 6101780905.0, "c": 83289506.0}, "Jul-24": {"t": 324879.0, "r": 8012.41, "c": 106.4}, "Ago-24": {"t": 307542.0, "r": 9794.63, "c": 115.43}, "Sep-24": {"t": 305485.0, "r": 11420.91, "c": 138.33}, "Oct-24": {"t": 310734.0, "r": 11684.61, "c": 146.02}, "Nov-24": {"t": 270728.0, "r": 8995.06, "c": 121.07}, "Dic-24": {"t": 274.42, "r": 8708.67, "c": 106.95}, "Acumulado 2024": {"t": 3521534.0, "r": 87113691993.0, "c": 1065136706.0}, "Ene-25": {"t": 270337.0, "r": 9023.42, "c": 76.52}, "Feb-25": {"t": 251838.0, "r": 8989.99, "c": 61.78}, "Mar-25": {"t": 255919.0, "r": 10552.95, "c": 259.12}, "Abr-25": {"t": 257789.0, "r": 11683.25, "c": 153.84}, "May-25": {"t": 258286.99999999997, "r": 10582.29, "c": 74.77}, "Jun-25": {"t": 248322.0, "r": 8607.34, "c": 215.69}, "Jul-25": {"t": 251205.0, "r": 9539.73, "c": 261.99}, "Ago-25": {"t": 236954.0, "r": 11455.8, "c": 188.85}, "Sep-25": {"t": 249188.0, "r": 12901.05, "c": 177.75}, "Oct-25": {"t": 249067.0, "r": 12515.22, "c": 176.12}, "Nov-25": {"t": 199795.0, "r": 8945.8, "c": 128.77}, "Dic-25": {"t": 207549.0, "r": 9584.38, "c": 152.28}, "Acumulado 2025": {"t": 2936250.0, "r": 124381196964.0, "c": 1927500568.0}, "Ene-26": {"t": 194258.0, "r": 11642.24, "c": 154.61}, "Feb-26": {"t": 168767.0, "r": 10895.35, "c": 126.88}, "Mar-26": {"t": 204569.0, "r": 12395.07, "c": 187.16}, "Abr-26": {"t": 201.57, "r": 10984.91, "c": 166644256.54}, "May-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jun-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jul-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Ago-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Sep-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Oct-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Nov-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Dic-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Acumulado 2026": {"t": 769164.0, "r": 45917572032.0, "c": 635281006.0}}}, {"canal": "Real Time managed by third parties", "subcanal": "External Office", "entidad": "Provincia Net", "fees": "MIX", "meses": {"Ene-24": {"t": 33429.0, "r": 330492031.0, "c": 2743476.0}, "Feb-24": {"t": 29576.0, "r": 331335529.0, "c": 2602476.0}, "Mar-24": {"t": 28836.0, "r": 400920928.0, "c": 3064805.0}, "Abr-24": {"t": 32.06, "r": 813841369.0, "c": 4867102.0}, "May-24": {"t": 32.07, "r": 881744207.0, "c": 5173039.0}, "Jun-24": {"t": 26.16, "r": 630427418.0, "c": 3820016.0}, "Jul-24": {"t": 31616.0, "r": 822.35, "c": 5.93}, "Ago-24": {"t": 29953.0, "r": 1003.09, "c": 6.63}, "Sep-24": {"t": 29255.0, "r": 1120.12, "c": 7.11}, "Oct-24": {"t": 30654.0, "r": 1146.11, "c": 7.13}, "Nov-24": {"t": 24473.0, "r": 831.05, "c": 5.66}, "Dic-24": {"t": 24875.0, "r": 824.98, "c": 5.47}, "Acumulado 2024": {"t": 352957.0, "r": 9136462408.0, "c": 60192345.0}, "Ene-25": {"t": 24983.0, "r": 882.25, "c": 7.47}, "Feb-25": {"t": 25169.0, "r": 950.54, "c": 6.46}, "Mar-25": {"t": 25991.0, "r": 1106.35, "c": 7.24}, "Abr-25": {"t": 23741.0, "r": 1131.63, "c": 7.32}, "May-25": {"t": 24.67, "r": 1173.37, "c": 7.6}, "Jun-25": {"t": 24214.0, "r": 983.58, "c": 6.7}, "Jul-25": {"t": 29561.0, "r": 1289.74, "c": 9.42}, "Ago-25": {"t": 24782.0, "r": 1318.03, "c": 9.0}, "Sep-25": {"t": 25509.0, "r": 1381.68, "c": 9.37}, "Oct-25": {"t": 25207.0, "r": 1324.22, "c": 9.08}, "Nov-25": {"t": 22894.0, "r": 1087.7, "c": 7.73}, "Dic-25": {"t": 25231.0, "r": 1253.15, "c": 8.76}, "Acumulado 2025": {"t": 301952.0, "r": 13882226105.0, "c": 96138918.0}, "Ene-26": {"t": 22176.0, "r": 1412.79, "c": 9.01}, "Feb-26": {"t": 20581.0, "r": 1357.96, "c": 9.19}, "Mar-26": {"t": 25327.0, "r": 1593.96, "c": 10.72}, "Abr-26": {"t": 23979.0, "r": 1364.01, "c": 9294361.04}, "May-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jun-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jul-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Ago-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Sep-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Oct-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Nov-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Dic-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Acumulado 2026": {"t": 92063.0, "r": 5728721358.0, "c": 38215404.0}}}, {"canal": "Real Time managed by third parties", "subcanal": "External Office", "entidad": "Cobro Express", "fees": "MIX", "meses": {"Ene-24": {"t": 5456.0, "r": 54856104.0, "c": 312324.0}, "Feb-24": {"t": 5032.0, "r": 54371448.0, "c": 305056.0}, "Mar-24": {"t": 5075.0, "r": 98070879.0, "c": 540449.0}, "Abr-24": {"t": 5876.0, "r": 243265640.0, "c": 1165207.0}, "May-24": {"t": 5748.0, "r": 242903733.0, "c": 1162043.0}, "Jun-24": {"t": 4403.0, "r": 160722218.0, "c": 776086.0}, "Jul-24": {"t": 5906.0, "r": 227.02, "c": 1.09}, "Ago-24": {"t": 5189.0, "r": 260.32, "c": 1.23}, "Sep-24": {"t": 5348.0, "r": 260.29, "c": 1.24}, "Oct-24": {"t": 4356.0, "r": 271.22, "c": 1.21}, "Nov-24": {"t": 2.53, "r": 185.2, "c": 0.92}, "Dic-24": {"t": 2362.0, "r": 159.66, "c": 0.75}, "Acumulado 2024": {"t": 57281.0, "r": 2217906388.0, "c": 10706181.0}, "Ene-25": {"t": 2531.0, "r": 205.04, "c": 0.95}, "Feb-25": {"t": 2477.0, "r": 179.31, "c": 0.8}, "Mar-25": {"t": 2383.0, "r": 239.57, "c": 1.07}, "Abr-25": {"t": 2562.0, "r": 240.45, "c": 1.11}, "May-25": {"t": 2672.0, "r": 247.12, "c": 1.14}, "Jun-25": {"t": 3042.0, "r": 248.23, "c": 1.15}, "Jul-25": {"t": 5835.0, "r": 510.48, "c": 2.37}, "Ago-25": {"t": 3962.0, "r": 426.3, "c": 1.97}, "Sep-25": {"t": 3793.0, "r": 415.49, "c": 1.92}, "Oct-25": {"t": 5618.0, "r": 473.86, "c": 2.2}, "Nov-25": {"t": 4278.0, "r": 333.91, "c": 1.55}, "Dic-25": {"t": 5477.0, "r": 380.75, "c": 1.78}, "Acumulado 2025": {"t": 44.63, "r": 3900502405.0, "c": 18022088.0}, "Ene-26": {"t": 4154.0, "r": 488.61, "c": 2.23}, "Feb-26": {"t": 3938.0, "r": 377.48, "c": 1.75}, "Mar-26": {"t": 4979.0, "r": 457.15, "c": 2.12}, "Abr-26": {"t": 4272.0, "r": 435.69, "c": 2011870.75}, "May-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jun-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Jul-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Ago-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Sep-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Oct-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Nov-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Dic-26": {"t": 0.0, "r": 0.0, "c": 0.0}, "Acumulado 2026": {"t": 17343.0, "r": 1758935760.0, "c": 8106321.0}}}]};
+
+const CANAL_COLORS = {
+  'Direct Debit': '#378add',
+  'Non Real Time': '#ba7517',
+  'Real Time managed by Enel': '#3a9e6c',
+  'Real Time managed by third parties': '#e24b4a'
+};
+const CHART_COLORS = ['#378add','#e24b4a','#1d9e75','#ba7517','#7f77dd','#d85a30','#d4537e','#3a9e6c','#534ab7','#5f5e5a'];
+
+let selYears = new Set();
+let selMonths = new Set(); // labels like "Ene-24"
+let selEnts = new Set();
+let selCanals = new Set();
+let cEvo = null;
+
+const fmtN = n => Math.round(n).toLocaleString('es-AR');
+const fmtM = n => { const s=n<0?'-':''; return s+'$'+(Math.abs(n)/1e6).toFixed(1)+'M'; };
+const fmtB = n => { const s=n<0?'-':''; return s+'$'+(Math.abs(n)/1e9).toFixed(2)+'B'; };
+const fmtP = n => n.toFixed(2)+'%';
+const eff = (c,r) => r>0?(c/r)*100:0;
+const effBadge = pct => {
+  const cls = pct<1?'bg':pct<3?'by':'br';
+  return `<span class="badge ${cls}">${fmtP(pct)}</span>`;
+};
+
+// ── build controls ──────────────────────────────────────────────────────────
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRh4aORm1jli8TyudCj_Bi7fcI93d2lvMbmTzghMUIAVUU2kAGEcx6IN2mIuhlRp-WYymj_zN4eDkfb/pub?gid=656722130&single=true&output=csv';
+
+function parseNum(v){
+  if(v===null||v===undefined||v==='')return 0;
+  if(typeof v==='number') {
+    const s=v.toFixed(10).replace(/0+$/,'');
+    const dec=s.includes('.')?s.split('.')[1].length:0;
+    if(dec===3&&v<100000)return v*1000;
+    return v;
+  }
+  const s=String(v).replace(/[^0-9.,\-]/g,'').replace(/\./g,'').replace(',','.');
+  return parseFloat(s)||0;
+}
+
+function parseCSV(text){
+  return text.trim().split('\n').map(line=>{
+    const cols=[];let cur='',inQ=false;
+    for(let i=0;i<line.length;i++){
+      const ch=line[i];
+      if(ch==='"'){inQ=!inQ;}
+      else if(ch===','&&!inQ){cols.push(cur.trim());cur='';}
+      else{cur+=ch;}
+    }
+    cols.push(cur.trim());return cols;
+  });
+}
+
+function buildDataset(rows){
+  // Fila 1: fechas (col 7+ cada 3 cols)
+  const months=[];
+  rows[0].forEach((val,ci)=>{
+    if(!val)return;
+    // Google Sheets exporta fechas como "1/24/2026" o "ene-24" o texto
+    let year=null,month=null,label=val,isAcum=false;
+    // Detectar si es "Acumulado XXXX"
+    if(String(val).toLowerCase().includes('acumulado')){
+      isAcum=true;label=val;
+      months.push({col:ci,year:null,month:null,label:String(val),isAcum:true});
+      return;
+    }
+    // Formato fecha del CSV: puede ser "1/24/2026" donde día=año, o timestamp
+    const MESES_ES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    const asStr=String(val).toLowerCase().trim();
+    // Formato "ene-24", "feb-25" etc
+    let m=asStr.match(/^([a-z]{3})[-\/](\d{2,4})$/);
+    if(m){const mi=MESES_ES.indexOf(m[1]);if(mi>=0){month=mi+1;year=+m[2]<100?2000+ +m[2]:+m[2];}}
+    // Formato fecha serial o "M/D/YYYY" donde D=año offset
+    if(!year){
+      const parts=asStr.split('/');
+      if(parts.length===3){
+        const d=+parts[1],mo=+parts[0],y=+parts[2];
+        if(d>=24&&d<=26){year=2000+d;month=mo;}
+      }
+    }
+    if(!year)return;
+    const MESES_C=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    label=MESES_C[month-1]+'-'+(year-2000).toString().padStart(2,'0');
+    months.push({col:ci,year,month,label,isAcum:false});
+  });
+
+  // Filas 3+: entidades
+  const data=[];
+  for(let ri=2;ri<rows.length;ri++){
+    const row=rows[ri];
+    if(!row[1]||row[1].trim()==='')continue;
+    if(row[6]&&String(row[6]).toLowerCase()==='totales')continue;
+    const entity={
+      canal:row[1].trim(),subcanal:row[2]?row[2].trim():'',
+      entidad:row[5]?row[5].trim():'',fees:row[6]?row[6].trim():'',
+      meses:{}
+    };
+    months.forEach(m=>{
+      const ci=m.col;
+      if(ci+2<row.length){
+        const t=parseNum(row[ci]),r=parseNum(row[ci+1]),com=parseNum(row[ci+2]);
+        entity.meses[m.label]={t,r,c:com};
+      }
+    });
+    data.push(entity);
+  }
+  return{months,data};
+}
+
+async function loadData(){
+  try{
+    const res=await fetch(CSV_URL+'&t='+Date.now(),{cache:'no-store'});
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const text=await res.text();
+    const rows=parseCSV(text);
+    const ds=buildDataset(rows);
+    if(ds.data.length>0){
+      console.log('CSV cargado:',ds.data.length,'entidades,',ds.months.length,'períodos');
+      return ds;
+    }
+  }catch(e){
+    console.warn('CSV falló, usando datos embebidos:',e.message);
+  }
+  return{months:RAW.months,data:RAW.data};
+}
+
+let DATASET = null;
+
+async function init(){
+  DATASET = await loadData();
+  const years = [...new Set(DATASET.months.filter(m=>!m.isAcum).map(m=>m.year))].sort();
+  selYears.add(years[years.length-1]);
+
+  document.getElementById('year-chips').innerHTML = years.map(y=>
+    `<span class="chip year-chip${selYears.has(y)?' active':''}" onclick="toggleYear(${y})">${y}</span>`
+  ).join('');
+
+  buildMonthChips();
+
+  const canals = [...new Set(DATASET.data.map(d=>d.canal))];
+  document.getElementById('canal-chips').innerHTML = canals.map(c=>
+    `<span class="chip" onclick="toggleCanal('${c.replace(/'/g,"\'")}')">${c}</span>`
+  ).join('');
+
+  const ents = [...new Set(DATASET.data.map(d=>d.entidad))].sort();
+  document.getElementById('ent-chips').innerHTML = ents.map(e=>
+    `<span class="chip" onclick="toggleEnt('${e.replace(/'/g,"\'")}')">${e}</span>`
+  ).join('');
+
+  document.getElementById('last-update').textContent = new Date().toLocaleString('es-AR');
+  render();
+}
+
+function buildMonthChips(){
+  const ms = DATASET.months.filter(m=>selYears.has(m.year)&&!m.isAcum);
+  if(!selMonths.size && ms.length) selMonths.add(ms[ms.length-1].label);
+  const multi = selYears.size>1;
+  document.getElementById('month-chips').innerHTML = ms.map(m=>
+    `<span class="chip${selMonths.has(m.label)?' active':''}" data-lbl="${m.label}" onclick="toggleMonth('${m.label}')">${multi?m.label:m.label.split('-')[0]}</span>`
+  ).join('');
+}
+
+function toggleYear(y){
+  selYears.has(y)?(selYears.size>1&&selYears.delete(y)):selYears.add(y);
+  document.querySelectorAll('.year-chip').forEach(el=>el.classList.toggle('active',selYears.has(+el.textContent)));
+  selMonths.clear();buildMonthChips();render();
+}
+function toggleMonth(lbl){
+  selMonths.has(lbl)?(selMonths.size>1&&selMonths.delete(lbl)):selMonths.add(lbl);
+  document.querySelectorAll('#month-chips .chip').forEach(el=>el.classList.toggle('active',selMonths.has(el.getAttribute('onclick').match(/"([^"]+)"/)?.[1]||el.getAttribute('onclick').match(/'([^']+)'/)?.[1])));
+  render();
+}
+function toggleAllEnt(){selEnts.clear();document.getElementById('chip-all-ent').classList.add('active');document.querySelectorAll('#ent-chips .chip').forEach(el=>el.classList.remove('active'));render();}
+function toggleEnt(e){
+  selEnts.has(e)?selEnts.delete(e):selEnts.add(e);
+  document.getElementById('chip-all-ent').classList.toggle('active',selEnts.size===0);
+  document.querySelectorAll('#ent-chips .chip').forEach(el=>{
+    const n=el.getAttribute('onclick').match(/'([^']+)'/)?.[1]||el.textContent;
+    el.classList.toggle('active',selEnts.has(n));
+  });
+  render();
+}
+function toggleAllCan(){selCanals.clear();document.getElementById('chip-all-can').classList.add('active');document.querySelectorAll('#canal-chips .chip').forEach(el=>el.classList.remove('active'));render();}
+function toggleCanal(c){
+  selCanals.has(c)?selCanals.delete(c):selCanals.add(c);
+  document.getElementById('chip-all-can').classList.toggle('active',selCanals.size===0);
+  document.querySelectorAll('#canal-chips .chip').forEach(el=>{
+    const n=el.getAttribute('onclick').match(/'([^']+)'/)?.[1]||el.textContent;
+    el.classList.toggle('active',selCanals.has(n));
+  });
+  render();
+}
+
+// ── data helpers ────────────────────────────────────────────────────────────
+function getFiltered(){
+  const lbls = [...selMonths];
+  return DATASET.data
+    .filter(d=>(selEnts.size===0||selEnts.has(d.entidad))&&(selCanals.size===0||selCanals.has(d.canal)))
+    .map(d=>{
+      let t=0,r=0,c=0;
+      lbls.forEach(lbl=>{const m=d.meses[lbl];if(m){t+=m.t;r+=m.r;c+=m.c;}});
+      return{...d,t,r,c,pct:eff(c,r)};
+    });
+}
+
+// ── render ──────────────────────────────────────────────────────────────────
+function render(){
+  const data = getFiltered();
+  const labels = [...selMonths].sort();
+  const periodos = labels.join(', ');
+  document.getElementById('sub').textContent = `${periodos} · ${selEnts.size?[...selEnts].join(', '):'Todas las entidades'}`;
+
+  const totT = data.reduce((s,d)=>s+d.t,0);
+  const totR = data.reduce((s,d)=>s+d.r,0);
+  const totC = data.reduce((s,d)=>s+d.c,0);
+  const totPct = eff(totC,totR);
+
+  // KPIs
+  document.getElementById('kpis').innerHTML=[
+    {l:'Total Talones',v:fmtN(totT),s:'transacciones del período',c:'var(--text)'},
+    {l:'Total Recaudado',v:fmtB(totR),s:'monto en pesos',c:'var(--text)'},
+    {l:'Total Comisión',v:fmtM(totC),s:'pagado a recaudadores',c:'var(--red)'},
+    {l:'% Eficiencia global',v:fmtP(totPct),s:'Comisión / Recaudado',c:totPct<1?'var(--green)':totPct<3?'#ba7517':'var(--red)'},
+  ].map(k=>`<div class="metric"><div class="mlabel">${k.l}</div><div class="mval" style="color:${k.c}">${k.v}</div><div class="msub">${k.s}</div></div>`).join('');
+
+  // Tabla entidades agrupadas por canal
+  const canals = [...new Set(data.map(d=>d.canal))];
+  let tbodyHtml = '';
+  canals.forEach(canal=>{
+    const rows = data.filter(d=>d.canal===canal);
+    const cT=rows.reduce((s,d)=>s+d.t,0), cR=rows.reduce((s,d)=>s+d.r,0), cC=rows.reduce((s,d)=>s+d.c,0);
+    const col = CANAL_COLORS[canal]||'var(--text)';
+    tbodyHtml+=`<tr class="row-canal"><td style="color:${col}">${canal}</td><td>${fmtN(cT)}</td><td>${fmtB(cR)}</td><td>${fmtM(cC)}</td><td>${effBadge(eff(cC,cR))}</td><td>—</td></tr>`;
+    rows.sort((a,b)=>b.r-a.r).forEach(d=>{
+      const cpt = d.t>0?d.c/d.t:0;
+      tbodyHtml+=`<tr><td class="left" style="padding-left:20px">${d.entidad}</td><td>${fmtN(d.t)}</td><td>${fmtB(d.r)}</td><td>${fmtM(d.c)}</td><td>${effBadge(d.pct)}</td><td>$${Math.round(cpt).toLocaleString('es-AR')}</td></tr>`;
+    });
+  });
+  document.getElementById('tbody-ent').innerHTML=tbodyHtml;
+  document.getElementById('tfoot-ent').innerHTML=`<tr><td>TOTAL</td><td>${fmtN(totT)}</td><td>${fmtB(totR)}</td><td>${fmtM(totC)}</td><td>${effBadge(totPct)}</td><td>—</td></tr>`;
+
+  // Comparativa canales
+  document.getElementById('tbody-canal').innerHTML=canals.map(canal=>{
+    const rows=data.filter(d=>d.canal===canal);
+    const cT=rows.reduce((s,d)=>s+d.t,0),cR=rows.reduce((s,d)=>s+d.r,0),cC=rows.reduce((s,d)=>s+d.c,0);
+    const col=CANAL_COLORS[canal]||'var(--text)';
+    return`<tr><td class="left" style="color:${col};font-weight:600">${canal}</td><td>${fmtN(cT)}</td><td>${fmtB(cR)}</td><td>${fmtM(cC)}</td><td>${effBadge(eff(cC,cR))}</td></tr>`;
+  }).join('');
+
+  // Ranking volumen (barras)
+  const sorted = [...data].sort((a,b)=>b.r-a.r);
+  const maxR = sorted[0]?.r||1;
+  document.getElementById('ranking-vol').innerHTML = sorted.map((d,i)=>`
+    <div style="margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px">
+        <span style="font-weight:600;color:${CANAL_COLORS[d.canal]||'var(--text)'}">${d.entidad}</span>
+        <span style="color:var(--text2)">${fmtB(d.r)}</span>
+      </div>
+      <div style="background:var(--surface2);border-radius:3px;height:10px;overflow:hidden">
+        <div style="height:100%;width:${(d.r/maxR*100).toFixed(1)}%;background:${CANAL_COLORS[d.canal]||'#378add'};border-radius:3px"></div>
+      </div>
+    </div>`).join('');
+
+  // Ranking costo
+  const sortedEff = [...data].filter(d=>d.r>0).sort((a,b)=>a.pct-b.pct);
+  document.getElementById('tbody-rank').innerHTML=sortedEff.map((d,i)=>{
+    const cpt=d.t>0?d.c/d.t:0;
+    return`<tr><td class="left">${i+1}. ${d.entidad}</td><td class="left" style="color:${CANAL_COLORS[d.canal]||'var(--text2)'};font-size:11px">${d.canal}</td><td>${effBadge(d.pct)}</td><td>$${Math.round(cpt).toLocaleString('es-AR')}</td><td>${fmtN(d.t)}</td><td>${fmtB(d.r)}</td><td>${fmtM(d.c)}</td></tr>`;
+  }).join('');
+
+  renderEvo(data);
+}
+
+function renderEvo(filteredData){
+  // Obtener todos los meses de los años seleccionados en orden
+  const allMonths = DATASET.months.filter(m=>selYears.has(m.year)&&!m.isAcum).map(m=>m.label);
+  const entities = filteredData.length<=8 ? filteredData : [];
+  const datasets = [];
+
+  if(entities.length>0 && entities.length<=6){
+    // Mostrar línea por entidad
+    entities.forEach((ent,i)=>{
+      const vals = allMonths.map(lbl=>{
+        const m=ent.meses[lbl];
+        return m&&m.r>0?parseFloat(eff(m.c,m.r).toFixed(2)):null;
+      });
+      const col=CHART_COLORS[i%CHART_COLORS.length];
+      datasets.push({label:ent.entidad.length>15?ent.entidad.slice(0,14)+'…':ent.entidad,data:vals,borderColor:col,backgroundColor:col,borderWidth:2,pointRadius:3,tension:0.3,fill:false,spanGaps:true});
+    });
+  } else {
+    // Mostrar línea por canal
+    const canals=[...new Set(filteredData.map(d=>d.canal))];
+    canals.forEach((canal,i)=>{
+      const cRows=filteredData.filter(d=>d.canal===canal);
+      const vals=allMonths.map(lbl=>{
+        let tC=0,tR=0;
+        cRows.forEach(d=>{const m=d.meses[lbl];if(m){tC+=m.c;tR+=m.r;}});
+        return tR>0?parseFloat(eff(tC,tR).toFixed(2)):null;
+      });
+      const col=CANAL_COLORS[canal]||CHART_COLORS[i];
+      datasets.push({label:canal,data:vals,borderColor:col,backgroundColor:col,borderWidth:2.5,pointRadius:4,tension:0.3,fill:false,spanGaps:true});
+    });
+  }
+
+  // Leyenda
+  document.getElementById('evo-legend').innerHTML=datasets.map(ds=>
+    `<span style="display:flex;align-items:center;gap:4px"><span style="width:14px;height:2.5px;background:${ds.borderColor};display:inline-block"></span><span>${ds.label}</span></span>`
+  ).join('');
+
+  if(cEvo){cEvo.destroy();cEvo=null;}
+  const ctx=document.getElementById('cEvo');
+  if(!ctx)return;
+  cEvo=new Chart(ctx,{
+    type:'line',
+    data:{labels:allMonths,datasets},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': '+c.parsed.y?.toFixed(2)+'%'}}},
+      scales:{
+        x:{ticks:{font:{size:10},maxRotation:45},grid:{color:'rgba(0,0,0,0.05)'}},
+        y:{ticks:{font:{size:11},callback:v=>v+'%'},grid:{color:'rgba(0,0,0,0.05)'}}
+      }
+    }
+  });
+}
+
+init();
+</script>
+</body>
+</html>
